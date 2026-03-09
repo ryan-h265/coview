@@ -17,6 +17,7 @@
   "scripts": {
     "postinstall": "patch-package",
     "icon:generate": "python3 scripts/generate-icon.py",
+    "icon:trim": "python3 scripts/trim-icon-set.py",
     "build:whisper-runtime:upstream": "node scripts/build-upstream-whisper-runtime.mjs",
     "prepare:whisper-runtime": "node scripts/prepare-whisper-runtime.mjs",
     "package:whisper-runtime": "node scripts/package-whisper-runtime.mjs",

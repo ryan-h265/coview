@@ -17,7 +17,7 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
-import { createWriteStream, existsSync } from "node:fs";
+import { createWriteStream, existsSync, readFileSync } from "node:fs";
 import { appendFile, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import {
   appendInProgressRecordingChunk,
@@ -1470,7 +1470,70 @@ function getExtensionForMimeType(mimeType: string): string {
   return "bin";
 }
 
+function getAppAssetPath(filename: string): string {
+  return path.join(__dirname, "assets", "icons", filename);
+}
+
+function loadAppIconAsset(filename: string): Electron.NativeImage | null {
+  const iconPath = getAppAssetPath(filename);
+  if (!existsSync(iconPath)) {
+    return null;
+  }
+
+  const image = nativeImage.createFromPath(iconPath);
+  return image.isEmpty() ? null : image;
+}
+
+function loadAppAssetDataUrl(filename: string, mimeType: string): string | null {
+  const assetPath = getAppAssetPath(filename);
+  if (!existsSync(assetPath)) {
+    return null;
+  }
+  return `data:${mimeType};base64,${readFileSync(assetPath).toString("base64")}`;
+}
+
+function createDarwinTrayIcon(): Electron.NativeImage | null {
+  const oneXDataUrl = loadAppAssetDataUrl("coview_tray_template_18x18.png", "image/png");
+  const twoXDataUrl = loadAppAssetDataUrl("coview_tray_template_36x36.png", "image/png");
+  if (oneXDataUrl && twoXDataUrl) {
+    const image = nativeImage.createEmpty();
+    image.addRepresentation({ scaleFactor: 1, dataURL: oneXDataUrl });
+    image.addRepresentation({ scaleFactor: 2, dataURL: twoXDataUrl });
+    if (!image.isEmpty()) {
+      image.setTemplateImage(true);
+      return image;
+    }
+  }
+
+  const svgDataUrl = loadAppAssetDataUrl("coview_tray_template.svg", "image/svg+xml");
+  if (!svgDataUrl) {
+    return null;
+  }
+
+  const image = nativeImage.createFromDataURL(svgDataUrl).resize({ width: 18, height: 18 });
+  if (image.isEmpty()) {
+    return null;
+  }
+
+  image.setTemplateImage(true);
+  return image;
+}
+
 function createTrayIcon(): Electron.NativeImage {
+  if (process.platform === "darwin") {
+    const image = createDarwinTrayIcon();
+    if (image) {
+      return image;
+    }
+  }
+
+  if (process.platform !== "darwin") {
+    const image = loadAppIconAsset("coview_32.png");
+    if (image) {
+      return image.resize({ width: 18, height: 18 });
+    }
+  }
+
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
       <rect x="2" y="2" width="14" height="14" rx="3" fill="#111111" />
@@ -1506,6 +1569,7 @@ function toggleMainWindow(): void {
 }
 
 async function createMainWindow(): Promise<void> {
+  const windowIcon = process.platform === "darwin" ? null : loadAppIconAsset("coview_512.png");
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -1513,6 +1577,7 @@ async function createMainWindow(): Promise<void> {
     minHeight: 720,
     show: false,
     autoHideMenuBar: true,
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -3800,6 +3865,10 @@ async function bootstrap(): Promise<void> {
   });
 
   if (process.platform === "darwin") {
+    const appIcon = loadAppIconAsset("coview_512.png");
+    if (appIcon) {
+      app.dock?.setIcon(appIcon);
+    }
     app.dock?.hide();
   }
 

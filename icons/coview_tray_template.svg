@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round">
+    <!-- C arc -->
+    <path d="M25.8 8.4
+             A11.5 11.5 0 1 0 25.8 27.6"
+          stroke-width="3.2"/>
+    <!-- V monogram -->
+    <path d="M16.6 12.2 L20.0 24.0 L23.4 12.2"
+          stroke-width="2.8"/>
+  </g>
+  <!-- lens / focus dot -->
+  <circle cx="25.2" cy="18" r="2.2" fill="#000"/>
+</svg>

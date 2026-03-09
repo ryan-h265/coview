@@ -179,4 +179,5 @@ Skip notarization with `COVIEW_SKIP_NOTARIZE=1`. Entitlements live in `build/ent
 - `postinstall` runs `patch-package` to apply `patches/app-builder-lib+26.8.1.patch`.
 - The app is single-instance. Launching it again focuses the existing window.
 - Closing the window hides Coview instead of quitting; reopen it from the tray icon or quit from the tray menu.
-- Regenerate the icon with `npm run icon:generate`.
+- Source icons live in `icons/`; `npm run build` stages them into `build/` for packaging and `dist/assets/icons/` for runtime use.
+- Run `npm run icon:trim` after replacing `icons/coview_master.png` to crop transparent padding and regenerate the app icon set.
