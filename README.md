@@ -26,7 +26,7 @@ Coview is an Electron desktop recorder for capturing a screen or window, storing
 - Node `22.22.0`
 - npm `10.9.4`
 - macOS or Linux for the documented runtime and packaging flows
-- CMake plus a working C/C++ toolchain if you want to build the bundled `whisper-cli` runtime locally
+- A prebuilt `whisper-cli` runtime directory or archive for each platform you package
 - Optional `ffmpeg` on `PATH` for better media-to-WAV conversion before transcription
 - Optional `whisper` on `PATH` if you want the Python fallback provider
 
@@ -52,17 +52,30 @@ Coview checks transcription providers in this order:
 
 For `whisper-cli`, the app looks for a usable runtime in these places:
 
-1. A packaged or staged runtime under `build/whisper-runtime/<label>/`
-2. A local `tools/whisper.cpp/build/bin/` build
+1. A packaged runtime under the app's bundled `whisper-runtime/<label>/` resources
+2. A staged development runtime under `build/whisper-runtime/<label>/`
 3. A system `whisper-cli` on `PATH`
 
-For a development setup that uses the bundled runtime path, build and stage it with:
+This repository no longer vendors `whisper.cpp` source. `npm run prepare:whisper-runtime` now stages a prebuilt runtime from one of these inputs:
+
+1. `COVIEW_WHISPER_RUNTIME_DIR=/path/to/runtime-directory`
+2. `COVIEW_WHISPER_RUNTIME_ARCHIVE=/path/or/url/to/runtime.tar.gz`
+3. `COVIEW_WHISPER_RUNTIME_MANIFEST=/path/to/whisper-runtime.manifest.json`
+4. `./whisper-runtime.manifest.json` in the repo root
+
+Manifest format is shown in `whisper-runtime.manifest.example.json`.
+
+If you need to build a runtime transiently from upstream without checking its source into this repository, use:
 
 ```bash
-npm run prepare:whisper-runtime
+npm run build:whisper-runtime:upstream -- --label linux-x64 --out-dir .runtime-build/linux-x64
 ```
 
-That command compiles `tools/whisper.cpp` and stages `whisper-cli` plus matching shared libraries into `build/whisper-runtime/<label>/`.
+To turn a locally built runtime directory into a portable archive plus SHA-256 digest:
+
+```bash
+npm run package:whisper-runtime -- --source-dir /path/to/runtime --label linux-x64
+```
 
 After the app starts, open `Settings -> Guided Setup` to install, switch, or remove supported local Whisper models, or point Coview at an existing local `.bin` model file. Fresh installs keep local processing disabled until setup completes successfully.
 
@@ -80,7 +93,7 @@ Current managed model catalog:
 Example:
 
 ```bash
-COVIEW_WHISPER_MODEL=tools/whisper.cpp/models/ggml-small.en.bin npm start
+COVIEW_WHISPER_MODEL=$HOME/Models/ggml-small.en.bin npm start
 ```
 
 ## Testing and CI
@@ -96,6 +109,8 @@ npm run test:coverage
 ```
 
 The GitHub Actions workflow in `.github/workflows/test.yml` runs `npm ci`, `npm run build`, and `npm run test:coverage` on pushes to `main` and `master`, plus pull requests.
+
+`.github/workflows/release-packages.yml` builds `whisper-cli` transiently from upstream `whisper.cpp`, packages a runtime archive, and then builds release artifacts with that runtime bundled for macOS universal and Linux x64.
 
 ## Storage and generated files
 
@@ -125,7 +140,7 @@ Recordings, transcription, search, summaries, topics, keywords, and telemetry st
 
 Build on the target platform. Cross-compilation is not supported. Output goes to `release/`.
 
-Package commands automatically run `npm run prepare:whisper-runtime` before packaging.
+Package commands still stage `build/whisper-runtime/<label>/` automatically, but they now expect prebuilt runtime inputs instead of a vendored source checkout.
 
 macOS:
 
@@ -135,7 +150,7 @@ npm run package:mac:universal
 npm run package:mac:dir
 ```
 
-`package:mac` and `package:mac:dir` target Apple Silicon (`--arm64`). `package:mac:universal` stages a universal Whisper runtime by setting `COVIEW_WHISPER_RUNTIME_LABEL=darwin-universal` and `COVIEW_WHISPER_RUNTIME_ARCHS='arm64;x86_64'`.
+`package:mac` and `package:mac:dir` target Apple Silicon (`--arm64`). `package:mac:universal` expects a `darwin-universal` runtime label.
 
 Linux:
 
@@ -160,8 +175,7 @@ Skip notarization with `COVIEW_SKIP_NOTARIZE=1`. Entitlements live in `build/ent
 
 - `src/` contains the Electron main, preload, renderer, and shared helper code.
 - `test/` contains Vitest unit and integration coverage for the current MVP behavior.
-- `scripts/` contains build, runtime staging, icon, and notarization helpers.
-- `tools/whisper.cpp/` is the vendored upstream source used to build `whisper-cli`.
+- `scripts/` contains build, runtime staging, runtime packaging, icon, and notarization helpers.
 - `postinstall` runs `patch-package` to apply `patches/app-builder-lib+26.8.1.patch`.
 - The app is single-instance. Launching it again focuses the existing window.
 - Closing the window hides Coview instead of quitting; reopen it from the tray icon or quit from the tray menu.

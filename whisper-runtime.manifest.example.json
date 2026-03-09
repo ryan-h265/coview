@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "runtimes": {
+    "darwin-arm64": {
+      "url": "https://example.com/whisper-runtime-darwin-arm64.tar.gz",
+      "sha256": "replace-with-sha256"
+    },
+    "darwin-universal": {
+      "url": "https://example.com/whisper-runtime-darwin-universal.tar.gz",
+      "sha256": "replace-with-sha256"
+    },
+    "linux-x64": {
+      "archivePath": "/absolute/path/to/whisper-runtime-linux-x64.tar.gz",
+      "sha256": "replace-with-sha256"
+    }
+  }
+}

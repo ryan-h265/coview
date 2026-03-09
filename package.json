@@ -17,7 +17,9 @@
   "scripts": {
     "postinstall": "patch-package",
     "icon:generate": "python3 scripts/generate-icon.py",
+    "build:whisper-runtime:upstream": "node scripts/build-upstream-whisper-runtime.mjs",
     "prepare:whisper-runtime": "node scripts/prepare-whisper-runtime.mjs",
+    "package:whisper-runtime": "node scripts/package-whisper-runtime.mjs",
     "build": "tsc && node scripts/copy-static.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -27,7 +29,7 @@
     "start": "npm run build && electron .",
     "dev": "npm run build && electron .",
     "package:mac": "npm run prepare:whisper-runtime && npm run build && electron-builder --mac --arm64",
-    "package:mac:universal": "COVIEW_WHISPER_RUNTIME_LABEL=darwin-universal COVIEW_WHISPER_RUNTIME_ARCHS='arm64;x86_64' npm run prepare:whisper-runtime && npm run build && electron-builder --mac --universal",
+    "package:mac:universal": "COVIEW_WHISPER_RUNTIME_LABEL=darwin-universal npm run prepare:whisper-runtime && npm run build && electron-builder --mac --universal",
     "package:mac:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --mac --arm64 --dir",
     "package:linux": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux",
     "package:linux:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux --dir"

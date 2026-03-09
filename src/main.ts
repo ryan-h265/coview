@@ -795,10 +795,6 @@ function getWhisperRuntimeLabels(): string[] {
   return labels;
 }
 
-function getSourceWhisperBuildDir(): string {
-  return path.join(app.getAppPath(), "tools", "whisper.cpp", "build");
-}
-
 function getWhisperCliExecutableName(): string {
   return process.platform === "win32" ? "whisper-cli.exe" : "whisper-cli";
 }
@@ -838,7 +834,6 @@ function buildBundledCommandEnv(binDirs: string[], libraryDirs: string[]): NodeJ
 
 function resolveBundledWhisperCliCommand(): CommandResolution | null {
   const executableName = getWhisperCliExecutableName();
-  const sourceBuildDir = getSourceWhisperBuildDir();
 
   const candidates: Array<{
     commandPath: string;
@@ -859,23 +854,6 @@ function resolveBundledWhisperCliCommand(): CommandResolution | null {
       },
     );
   }
-
-  candidates.push(
-    {
-      commandPath: path.join(sourceBuildDir, "bin", executableName),
-      env: buildBundledCommandEnv(
-        [path.join(sourceBuildDir, "bin")],
-        [path.join(sourceBuildDir, "src"), path.join(sourceBuildDir, "ggml", "src")],
-      ),
-    },
-    {
-      commandPath: path.join(sourceBuildDir, "bin", "Release", executableName),
-      env: buildBundledCommandEnv(
-        [path.join(sourceBuildDir, "bin", "Release")],
-        [path.join(sourceBuildDir, "src", "Release"), path.join(sourceBuildDir, "ggml", "src", "Release")],
-      ),
-    },
-  );
 
   for (const candidate of candidates) {
     if (existsSync(candidate.commandPath)) {

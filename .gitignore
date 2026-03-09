@@ -7,14 +7,11 @@ release/
 out/
 coverage/
 build/whisper-runtime/
+build/whisper-runtime-artifacts/
 *.tsbuildinfo
 
-# Local whisper.cpp artifacts
-tools/whisper.cpp/build/
-tools/whisper.cpp/build-*/
-tools/whisper.cpp/build_*/
-tools/whisper.cpp/models/*.bin
-tools/whisper.cpp/.git-upstream/
+# Local whisper runtime config
+whisper-runtime.manifest.json
 
 # Logs
 *.log

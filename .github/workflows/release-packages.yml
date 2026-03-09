@@ -1,0 +1,112 @@
+name: Release Packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package-macos-universal:
+    runs-on: macos-latest
+    env:
+      COVIEW_SKIP_NOTARIZE: "1"
+      RUNTIME_LABEL: darwin-universal
+      RUNTIME_BUILD_DIR: .runtime-build/darwin-universal
+      RUNTIME_ARCHIVE: build/whisper-runtime-artifacts/whisper-runtime-darwin-universal.tar.gz
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build upstream whisper runtime
+        run: npm run build:whisper-runtime:upstream -- --label "$RUNTIME_LABEL" --out-dir "$RUNTIME_BUILD_DIR"
+
+      - name: Package whisper runtime archive
+        run: npm run package:whisper-runtime -- --source-dir "$RUNTIME_BUILD_DIR" --label "$RUNTIME_LABEL"
+
+      - name: Package macOS app
+        env:
+          COVIEW_WHISPER_RUNTIME_LABEL: ${{ env.RUNTIME_LABEL }}
+          COVIEW_WHISPER_RUNTIME_ARCHIVE: ${{ env.RUNTIME_ARCHIVE }}
+        run: npm run package:mac:universal
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coview-macos-universal
+          path: |
+            release/*
+            ${{ env.RUNTIME_ARCHIVE }}
+
+  package-linux-x64:
+    runs-on: ubuntu-latest
+    env:
+      RUNTIME_LABEL: linux-x64
+      RUNTIME_BUILD_DIR: .runtime-build/linux-x64
+      RUNTIME_ARCHIVE: build/whisper-runtime-artifacts/whisper-runtime-linux-x64.tar.gz
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build upstream whisper runtime
+        run: npm run build:whisper-runtime:upstream -- --label "$RUNTIME_LABEL" --out-dir "$RUNTIME_BUILD_DIR"
+
+      - name: Package whisper runtime archive
+        run: npm run package:whisper-runtime -- --source-dir "$RUNTIME_BUILD_DIR" --label "$RUNTIME_LABEL"
+
+      - name: Package Linux app
+        env:
+          COVIEW_WHISPER_RUNTIME_LABEL: ${{ env.RUNTIME_LABEL }}
+          COVIEW_WHISPER_RUNTIME_ARCHIVE: ${{ env.RUNTIME_ARCHIVE }}
+        run: npm run package:linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coview-linux-x64
+          path: |
+            release/*
+            ${{ env.RUNTIME_ARCHIVE }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs:
+      - package-macos-universal
+      - package-linux-x64
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f -maxdepth 3 -exec cp {} release-files/ \;
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-files/*
