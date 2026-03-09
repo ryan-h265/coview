@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coview Recorder</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>Coview</h1>
+          <p>Recorder Desktop</p>
+        </div>
+
+        <nav class="nav-menu" aria-label="Main menu">
+          <button class="nav-item is-active" type="button" data-tab-target="capture">
+            Capture
+          </button>
+          <button class="nav-item" type="button" data-tab-target="knowledge">
+            Knowledge
+          </button>
+          <button class="nav-item" type="button" data-tab-target="media">
+            Media
+          </button>
+          <button class="nav-item" type="button" data-tab-target="processing">
+            Processing
+          </button>
+          <button class="nav-item" type="button" data-tab-target="settings">
+            Settings
+          </button>
+          <button class="nav-item" type="button" data-tab-target="logs">
+            Logs
+          </button>
+        </nav>
+
+        <section class="sidebar-note">
+          <h2>Recording Notice</h2>
+          <p>
+            You must inform all participants before recording. Coview only shows this warning in MVP
+            and does not enforce participant consent flows.
+          </p>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <section class="tab-panel is-active" data-tab-panel="capture">
+          <div class="panel-grid two-col">
+            <section class="card">
+              <h3>Recording Source</h3>
+              <div class="panel-grid three-col">
+                <label class="field">
+                  <span>Capture source type</span>
+                  <select id="source-type">
+                    <option value="screen">Full Screen</option>
+                    <option value="window">Window</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Capture source</span>
+                  <select id="source-id"></select>
+                </label>
+                <label class="field">
+                  <span>Audio mode</span>
+                  <select id="audio-mode">
+                    <option value="system">System audio only</option>
+                    <option value="mic">Microphone only</option>
+                    <option value="both">System + microphone</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field">
+                <span>Session title</span>
+                <input id="title" type="text" placeholder="e.g. API auth migration" />
+              </label>
+            </section>
+
+            <section class="card">
+              <h3>Permissions</h3>
+              <p id="permission-status">Loading permission status...</p>
+              <div class="row">
+                <button id="refresh-permissions" type="button">Refresh Status</button>
+                <button id="request-microphone" type="button">Request Microphone</button>
+                <button id="open-screen-settings" type="button">Open Screen Settings</button>
+              </div>
+            </section>
+          </div>
+
+          <section class="card">
+            <h3>Auto Recording (Slack)</h3>
+            <p><strong>Status:</strong> <span id="auto-state">Loading...</span></p>
+            <p><strong>Slack signal:</strong> <span id="slack-signal">Waiting...</span></p>
+            <p><strong>Fallback inactivity timeout:</strong> <span id="inactivity-timeout">...</span></p>
+            <label class="field inline-field">
+              <span>Inactivity timeout (minutes)</span>
+              <div class="row">
+                <input id="inactivity-timeout-input" type="number" min="1" max="1440" step="1" />
+                <button id="save-timeout" type="button">Save Timeout</button>
+              </div>
+            </label>
+            <div class="row">
+              <button id="toggle-auto" type="button">Loading...</button>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="knowledge">
+          <section class="card sessions-layout-single">
+            <div class="session-list-pane">
+              <div class="jobs-header">
+                <h3>Sessions Timeline</h3>
+              </div>
+              <div class="search-row">
+                <input
+                  id="session-search-query"
+                  type="text"
+                  placeholder="Search setup, auth, deploy, etc."
+                />
+                <select id="session-search-mode">
+                  <option value="both">Keyword + Similarity</option>
+                  <option value="keyword">Keyword</option>
+                  <option value="semantic">Similarity</option>
+                </select>
+              </div>
+              <div class="row">
+                <button id="session-search-button" type="button">Search</button>
+                <button id="session-search-clear" type="button">Clear</button>
+              </div>
+              <div id="sessions-list" class="sessions-list"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="media">
+          <div class="media-layout">
+            <div class="media-player-pane">
+              <div class="media-preview">
+                <div class="media-preview-head">
+                  <strong>Recording Player</strong>
+                  <span id="session-player-meta">No session selected.</span>
+                </div>
+                <video id="session-player" class="session-player" controls preload="metadata"></video>
+              </div>
+              <div class="media-actions row">
+                <button id="replay-session" type="button" disabled>Open Externally</button>
+                <button id="save-session-detail" type="button" disabled>Save Changes</button>
+                <button id="export-md" type="button" disabled>Export MD</button>
+                <button id="export-txt" type="button" disabled>Export TXT</button>
+                <button id="export-json" type="button" disabled>Export JSON</button>
+                <button id="delete-session" type="button" class="danger" disabled>Delete</button>
+              </div>
+            </div>
+
+            <div class="media-transcript-pane">
+              <div class="detail-meta">
+                <span><strong>ID:</strong> <span id="detail-session-id">-</span></span>
+                <span><strong>Source:</strong> <span id="detail-source">-</span></span>
+                <span><strong>Started:</strong> <span id="detail-started-at">-</span></span>
+                <span><strong>Ended:</strong> <span id="detail-ended-at">-</span></span>
+                <span><strong>Status:</strong> <span id="detail-status">-</span></span>
+                <span><strong>Draft:</strong> <span id="detail-dirty-state">Saved</span></span>
+              </div>
+              <label class="field">
+                <span>Title</span>
+                <input id="detail-title" type="text" disabled />
+              </label>
+              <label class="field">
+                <span>Summary</span>
+                <textarea id="detail-summary" rows="3" disabled></textarea>
+              </label>
+              <label class="field">
+                <span>Topics (comma separated)</span>
+                <input id="detail-topics" type="text" disabled />
+              </label>
+              <label class="field">
+                <span>Keywords (comma separated)</span>
+                <input id="detail-keywords" type="text" disabled />
+              </label>
+              <section class="field">
+                <span>Timestamped Transcript</span>
+                <section class="transcript-timeline-panel">
+                  <div class="media-preview-head">
+                    <strong>Playback Cues</strong>
+                    <span id="detail-transcript-timeline-meta">No session selected.</span>
+                  </div>
+                  <div id="detail-transcript-timeline" class="transcript-timeline">
+                    <p class="transcript-segments-empty">
+                      Select a session to review synced transcript cues.
+                    </p>
+                  </div>
+                </section>
+              </section>
+              <label class="field">
+                <span>Transcript (editable)</span>
+                <textarea id="detail-transcript" rows="12" disabled></textarea>
+                <span class="setting-hint">
+                  Editing transcript text clears timestamp sync until you re-transcribe.
+                </span>
+              </label>
+              <section class="transcription-panel">
+                <div class="media-preview-head">
+                  <strong>Transcription Controls</strong>
+                  <span id="detail-transcription-meta">No transcript metadata yet.</span>
+                </div>
+                <div class="panel-grid three-col">
+                  <label class="field">
+                    <span>Provider</span>
+                    <select id="retranscribe-provider" disabled>
+                      <option value="auto">Auto</option>
+                      <option value="local-whisper-cli">Local whisper-cli</option>
+                      <option value="local-whisper-python">Local Python whisper</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Language</span>
+                    <select id="retranscribe-language-mode" disabled>
+                      <option value="en">English</option>
+                      <option value="auto">Auto Detect</option>
+                      <option value="custom">Custom Code</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Model override</span>
+                    <input
+                      id="retranscribe-model"
+                      type="text"
+                      placeholder="Optional model name or local model path"
+                      disabled
+                    />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Custom language code</span>
+                  <input
+                    id="retranscribe-language-custom"
+                    type="text"
+                    placeholder="e.g. en, en-us, fr"
+                    disabled
+                  />
+                </label>
+                <p class="setting-hint">
+                  Re-transcribe replaces the transcript, summary, topics, and keywords for this
+                  session.
+                </p>
+                <div class="row">
+                  <button id="retranscribe-session" type="button" disabled>Re-transcribe</button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="processing">
+          <section class="card">
+            <div class="jobs-header">
+              <h3>Processing Jobs</h3>
+              <button id="refresh-jobs" type="button">Refresh Jobs</button>
+            </div>
+            <div id="jobs-list" class="jobs-list"></div>
+          </section>
+          <section class="card">
+            <div class="jobs-header">
+              <h3>Transcription Diagnostics</h3>
+              <button id="refresh-transcription-diagnostics" type="button">Refresh Diagnostics</button>
+            </div>
+            <p id="transcription-diagnostics-summary" class="setting-hint">
+              Loading transcription diagnostics...
+            </p>
+            <div id="transcription-diagnostics-grid" class="diagnostics-grid"></div>
+            <div class="diagnostics-test">
+              <div class="media-preview-head">
+                <strong>Test Transcription</strong>
+                <span id="transcription-test-target">Select a session in Knowledge.</span>
+              </div>
+              <div class="row">
+                <button id="run-transcription-test" type="button" disabled>
+                  Test Selected Session
+                </button>
+              </div>
+              <pre id="transcription-test-output" class="log">No test run yet.</pre>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="settings">
+          <div class="panel-grid two-col">
+            <section class="card">
+              <h3>Storage</h3>
+              <p class="label">Current folder</p>
+              <code id="storage-path" class="path">Loading...</code>
+              <div class="row">
+                <button id="choose-storage" type="button">Choose Folder</button>
+              </div>
+            </section>
+
+          <section class="card">
+            <h3>Local Processing</h3>
+            <label class="checkbox-field" for="ai-processing-enabled">
+              <input id="ai-processing-enabled" type="checkbox" checked />
+              <span>Enable local transcript, summary, topics, and keywords generation</span>
+              </label>
+              <p class="setting-hint">
+                Disable this to run recording-only tests with no transcription or processing jobs.
+              </p>
+            </section>
+          </div>
+
+          <section class="card">
+            <h3>Transcription Defaults</h3>
+            <div class="setup-banner">
+              <div class="setup-banner-copy">
+                <strong>Guided setup</strong>
+                <p id="transcription-setup-summary" class="setting-hint">
+                  Install a local model or point Coview at an existing one.
+                </p>
+              </div>
+              <button id="open-transcription-setup" type="button" class="primary">
+                Guided Setup
+              </button>
+            </div>
+            <div class="panel-grid three-col">
+              <label class="field">
+                <span>Default provider</span>
+                <select id="settings-transcription-provider">
+                  <option value="auto">Auto</option>
+                  <option value="local-whisper-cli">Local whisper-cli</option>
+                  <option value="local-whisper-python">Local Python whisper</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Default language</span>
+                <select id="settings-transcription-language-mode">
+                  <option value="en">English</option>
+                  <option value="auto">Auto Detect</option>
+                  <option value="custom">Custom Code</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Default model override</span>
+                <input
+                  id="settings-transcription-model"
+                  type="text"
+                  placeholder="Optional model name or local model path"
+                />
+              </label>
+            </div>
+            <label class="field">
+              <span>Custom language code</span>
+              <input
+                id="settings-transcription-language-custom"
+                type="text"
+                placeholder="e.g. en, en-us, fr"
+              />
+            </label>
+            <p class="setting-hint">
+              Used for new processing jobs, diagnostics tests, and session controls by default.
+            </p>
+            <div class="row">
+              <button id="save-transcription-defaults" type="button">Save Transcription Defaults</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>Global Hotkeys</h3>
+            <div class="panel-grid three-col">
+              <label class="field">
+                <span>Start/Stop recording</span>
+                <input id="hotkey-start-stop" type="text" placeholder="CommandOrControl+Shift+R" />
+              </label>
+              <label class="field">
+                <span>Pause/Resume recording</span>
+                <input id="hotkey-pause-resume" type="text" placeholder="CommandOrControl+Shift+P" />
+              </label>
+              <label class="field">
+                <span>Toggle auto recording</span>
+                <input id="hotkey-auto-toggle" type="text" placeholder="CommandOrControl+Shift+A" />
+              </label>
+            </div>
+            <div class="row">
+              <button id="save-hotkeys" type="button">Save Hotkeys</button>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="logs">
+          <section class="card">
+            <div class="jobs-header">
+              <h3>Telemetry</h3>
+              <div class="row">
+                <button id="refresh-telemetry" type="button">Refresh Telemetry</button>
+                <button id="open-telemetry-dir" type="button">Open Logs Folder</button>
+              </div>
+            </div>
+            <p class="label">Telemetry file</p>
+            <code id="telemetry-path" class="path">Loading...</code>
+            <pre id="telemetry-log" class="log">Loading telemetry...</pre>
+          </section>
+
+          <section class="card">
+            <h3>Activity Log</h3>
+            <pre id="activity-log" class="log">Starting up...</pre>
+          </section>
+        </section>
+      </main>
+
+      <footer class="bottom-dock">
+        <div class="dock-reel">
+          <div class="dock-reel-header">
+            <h3>Session Reel</h3>
+            <span id="reel-count" class="dock-reel-count">0 sessions</span>
+          </div>
+          <div id="session-reel" class="session-reel"></div>
+        </div>
+        <div class="dock-transport">
+          <div class="dock-transport-status">
+            <span id="transport-recording-state" class="transport-pill">Idle</span>
+            <strong id="transport-elapsed" class="transport-elapsed">00:00</strong>
+          </div>
+          <div class="dock-transport-meter">
+            <span class="transport-stat-label">Level</span>
+            <div class="transport-meter" aria-hidden="true">
+              <div id="transport-level-fill" class="transport-meter-fill"></div>
+            </div>
+            <span id="transport-level-text" class="transport-stat-note">Idle</span>
+          </div>
+          <div class="dock-transport-source">
+            <span id="transport-source-summary" class="transport-meta">No source selected</span>
+            <span id="transport-automation" class="transport-stat-note">Loading...</span>
+          </div>
+          <div class="dock-transport-actions">
+            <button id="start-recording" type="button" class="dock-btn primary">Start</button>
+            <button id="pause-recording" type="button" class="dock-btn" disabled>Pause</button>
+            <button id="stop-recording" type="button" class="dock-btn" disabled>Stop</button>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <dialog id="confirm-dialog">
+      <div class="confirm-dialog-body">
+        <p id="confirm-dialog-message"></p>
+        <div class="row confirm-dialog-actions">
+          <button id="confirm-dialog-cancel" type="button">Cancel</button>
+          <button id="confirm-dialog-confirm" type="button" class="primary">Confirm</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="transcription-setup-dialog">
+      <div class="setup-dialog-body">
+        <div class="setup-dialog-head">
+          <div>
+            <p class="setup-dialog-kicker">Local Transcription</p>
+            <h3>Finish setup in one click</h3>
+          </div>
+          <button id="transcription-setup-close" type="button">Not Now</button>
+        </div>
+        <p id="transcription-setup-lead" class="setting-hint">
+          Coview can install a local Whisper model and enable local processing automatically.
+        </p>
+        <div id="transcription-setup-status" class="setup-status-card"></div>
+        <div class="jobs-header">
+          <strong>Model Library</strong>
+          <div class="row">
+            <button id="transcription-model-refresh" type="button">Refresh</button>
+            <button id="transcription-setup-browse" type="button">Use Existing Model File</button>
+          </div>
+        </div>
+        <div id="transcription-model-library" class="model-library"></div>
+        <p id="transcription-custom-model" class="setting-hint">
+          External model overrides will appear here when selected.
+        </p>
+        <p id="transcription-setup-result" class="setting-hint">
+          New installs keep local processing off until setup succeeds.
+        </p>
+      </div>
+    </dialog>
+
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

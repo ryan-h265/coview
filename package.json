@@ -1,0 +1,88 @@
+{
+  "name": "coview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Coview MVP desktop recorder",
+  "author": "Coview",
+  "main": "dist/main.js",
+  "packageManager": "npm@10.9.4",
+  "engines": {
+    "node": "22.22.0",
+    "npm": "10.9.4"
+  },
+  "volta": {
+    "node": "22.22.0",
+    "npm": "10.9.4"
+  },
+  "scripts": {
+    "postinstall": "patch-package",
+    "icon:generate": "python3 scripts/generate-icon.py",
+    "prepare:whisper-runtime": "node scripts/prepare-whisper-runtime.mjs",
+    "build": "tsc && node scripts/copy-static.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:coverage": "vitest run --coverage",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron .",
+    "package:mac": "npm run prepare:whisper-runtime && npm run build && electron-builder --mac --arm64",
+    "package:mac:universal": "COVIEW_WHISPER_RUNTIME_LABEL=darwin-universal COVIEW_WHISPER_RUNTIME_ARCHS='arm64;x86_64' npm run prepare:whisper-runtime && npm run build && electron-builder --mac --universal",
+    "package:mac:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --mac --arm64 --dir",
+    "package:linux": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux",
+    "package:linux:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux --dir"
+  },
+  "devDependencies": {
+    "@electron/notarize": "^3.1.0",
+    "@types/node": "^22.15.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "electron": "^36.0.0",
+    "electron-builder": "26.8.1",
+    "patch-package": "^8.0.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.18"
+  },
+  "build": {
+    "appId": "dev.coview.desktop",
+    "productName": "Coview",
+    "asar": true,
+    "afterSign": "scripts/notarize.cjs",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "README.md"
+    ],
+    "extraResources": [
+      {
+        "from": "build/whisper-runtime",
+        "to": "whisper-runtime",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo",
+      "icon": "build/icon.png"
+    }
+  }
+}

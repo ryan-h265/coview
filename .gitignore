@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build and packaging output
+dist/
+release/
+out/
+coverage/
+build/whisper-runtime/
+*.tsbuildinfo
+
+# Local whisper.cpp artifacts
+tools/whisper.cpp/build/
+tools/whisper.cpp/build-*/
+tools/whisper.cpp/build_*/
+tools/whisper.cpp/models/*.bin
+tools/whisper.cpp/.git-upstream/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local tool state
+.claude/settings.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
