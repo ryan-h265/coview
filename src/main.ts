@@ -1186,7 +1186,103 @@ async function readTelemetryTail(maxLines: number): Promise<string[]> {
 }
 
 function getDefaultStorageDir(): string {
+  if (process.platform === "darwin") {
+    return path.join(app.getPath("videos"), "Coview", "recordings");
+  }
   return path.join(app.getPath("documents"), "Coview", "recordings");
+}
+
+function getLegacyDarwinDefaultStorageDir(): string {
+  return path.join(app.getPath("documents"), "Coview", "recordings");
+}
+
+function isSamePath(left: string, right: string): boolean {
+  return path.resolve(left) === path.resolve(right);
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function ensureStorageDirReady(
+  storageDir: string,
+  options: { allowLegacyDarwinFallback?: boolean } = {},
+): Promise<string> {
+  try {
+    await mkdir(storageDir, { recursive: true });
+    await ensureLibraryManifest(storageDir);
+    return storageDir;
+  } catch (error) {
+    if (
+      options.allowLegacyDarwinFallback &&
+      process.platform === "darwin" &&
+      isSamePath(storageDir, getLegacyDarwinDefaultStorageDir())
+    ) {
+      const fallbackStorageDir = getDefaultStorageDir();
+      if (!isSamePath(storageDir, fallbackStorageDir)) {
+        try {
+          await mkdir(fallbackStorageDir, { recursive: true });
+          await ensureLibraryManifest(fallbackStorageDir);
+          logWarn("storage.default_dir_fallback", {
+            storageDir,
+            fallbackStorageDir,
+            error,
+          });
+          return fallbackStorageDir;
+        } catch (fallbackError) {
+          logError("storage.default_dir_fallback_failed", {
+            storageDir,
+            fallbackStorageDir,
+            error,
+            fallbackError,
+          });
+        }
+      }
+    }
+
+    const platformHint =
+      process.platform === "darwin"
+        ? " Grant macOS Files and Folders access, or choose another library in Settings."
+        : " Choose another library in Settings.";
+    throw new Error(
+      `Active library is not writable: ${storageDir}.${platformHint} Original error: ${toErrorMessage(error)}`,
+    );
+  }
+}
+
+async function resolveUsableEffectiveSettings(
+  effectiveSettings: EffectiveSettings,
+  options: { allowLegacyDarwinFallback?: boolean } = {},
+): Promise<EffectiveSettings> {
+  const storageDir = await ensureStorageDirReady(effectiveSettings.storageDir, options);
+  if (isSamePath(storageDir, effectiveSettings.storageDir)) {
+    return effectiveSettings;
+  }
+  return {
+    ...effectiveSettings,
+    storageDir,
+  };
+}
+
+async function getUsableEffectiveSettings(
+  options: { allowLegacyDarwinFallback?: boolean } = {},
+): Promise<EffectiveSettings> {
+  const effectiveSettings = await resolveUsableEffectiveSettings(
+    getEffectiveSettings(await readSettings()),
+    options,
+  );
+  const storedSettings = await readSettings();
+  if (storedSettings.storageDir && isSamePath(storedSettings.storageDir, effectiveSettings.storageDir)) {
+    return effectiveSettings;
+  }
+  if (
+    !storedSettings.storageDir &&
+    isSamePath(getDefaultStorageDir(), effectiveSettings.storageDir)
+  ) {
+    return effectiveSettings;
+  }
+  await persistEffectiveSettings(effectiveSettings);
+  return effectiveSettings;
 }
 
 function clampTelemetryTailLines(value: unknown): number {
@@ -1249,10 +1345,7 @@ async function persistEffectiveSettings(settings: EffectiveSettings): Promise<vo
 }
 
 async function getResolvedStorageDir(): Promise<string> {
-  const effectiveSettings = getEffectiveSettings(await readSettings());
-  await mkdir(effectiveSettings.storageDir, { recursive: true });
-  await ensureLibraryManifest(effectiveSettings.storageDir);
-  return effectiveSettings.storageDir;
+  return (await getUsableEffectiveSettings({ allowLegacyDarwinFallback: true })).storageDir;
 }
 
 async function resolveRecordingSessionStorageDir(recordingSessionId: string): Promise<string> {
@@ -1268,9 +1361,8 @@ async function beginRecordingSession(payload: BeginRecordingSessionPayload): Pro
     throw new Error("Invalid recording session payload.");
   }
 
-  const effectiveSettings = getEffectiveSettings(await readSettings());
+  const effectiveSettings = await getUsableEffectiveSettings({ allowLegacyDarwinFallback: true });
   const storageDir = effectiveSettings.storageDir;
-  await mkdir(storageDir, { recursive: true });
 
   const recordingSessionId = randomUUID();
   const startedAt = payload.metadata?.startedAt ?? nowIso();
@@ -3588,9 +3680,9 @@ async function updateSettingsPatch(patch: Partial<AppSettings>): Promise<Effecti
     merged.transcriptionSetup = nextSetup;
   }
 
-  const effective = getEffectiveSettings(merged);
-  await mkdir(effective.storageDir, { recursive: true });
-  await ensureLibraryManifest(effective.storageDir);
+  const effective = await resolveUsableEffectiveSettings(getEffectiveSettings(merged), {
+    allowLegacyDarwinFallback: typeof patch.storageDir !== "string",
+  });
 
   if (patch.hotkeys) {
     registerGlobalHotkeys(effective.hotkeys);
@@ -3877,9 +3969,7 @@ async function bootstrap(): Promise<void> {
     getMainWindow: () => mainWindow,
     getPermissionStatus,
     getEffectiveSettings: async () => {
-      const effectiveSettings = getEffectiveSettings(await readSettings());
-      await mkdir(effectiveSettings.storageDir, { recursive: true });
-      return effectiveSettings;
+      return getUsableEffectiveSettings({ allowLegacyDarwinFallback: true });
     },
     updateSettingsPatch: async (patch) => updateSettingsPatch(patch),
     getTelemetryFilePath,

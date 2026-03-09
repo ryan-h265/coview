@@ -41,7 +41,10 @@ npm start
 
 `npm start` runs `npm run build` and then launches Electron.
 
-On first launch, Coview creates the default active library at `~/Documents/Coview/recordings`.
+On first launch, Coview creates the default active library at:
+
+- macOS: `~/Movies/Coview/recordings`
+- Linux: `~/Documents/Coview/recordings`
 
 ## Local transcription setup
 
@@ -116,7 +119,7 @@ The GitHub Actions workflow in `.github/workflows/test.yml` runs `npm ci`, `npm 
 
 Coview stores sessions as flat files in a single active library directory.
 
-- Default library: `~/Documents/Coview/recordings`
+- Default library: macOS `~/Movies/Coview/recordings`; Linux `~/Documents/Coview/recordings`
 - Library manifest: `library.json`
 - In-progress recordings: `.tmp-recordings/<recording-id>/`
 - Session media and metadata JSON: stored side-by-side in the library root
