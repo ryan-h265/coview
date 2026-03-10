@@ -99,6 +99,34 @@ Example:
 COVIEW_WHISPER_MODEL=$HOME/Models/ggml-small.en.bin npm start
 ```
 
+## macOS recording save troubleshooting (fresh installs)
+
+If recordings are not being saved on macOS, run the built-in diagnostics script:
+
+```bash
+npm run doctor:mac-recording
+```
+
+The script checks:
+
+- Node/npm versions against the pinned project versions
+- Whether `ffmpeg` is installed and exposes macOS `avfoundation` devices
+- Writability of the default Coview recording library directories
+- Presence of `library.json` manifests in likely library paths
+- Active `storageDir` from Coview `settings.json` (including writability for custom library paths)
+- Coview `settings.json` and telemetry log tails under `~/Library/Application Support/*coview*`
+- TCC permission rows (screen capture, microphone, files) when the macOS privacy DB is readable
+
+For fresh installs, also verify these macOS permissions manually in **System Settings → Privacy & Security**:
+
+- **Screen Recording**: Coview (and Terminal if launching from Terminal)
+- **Microphone**: Coview
+- **Files and Folders**: Coview access to `Movies`/`Documents`
+
+Note: Coview defaults to `~/Movies/Coview/recordings` on macOS. If that location is blocked, the app can fall back from the legacy `Documents` location and will surface a writable-library error in logs/UI.
+
+If telemetry contains `recording.session_dropped_empty` with `bytesWritten: 0`, Coview started a session but no media chunks were persisted. In practice this usually points to Screen Recording permission issues, an invalid/ended capture source, or a custom library path that is not writable.
+
 ## Testing and CI
 
 Build and test commands:
