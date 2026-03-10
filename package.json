@@ -33,7 +33,8 @@
     "package:mac:universal": "COVIEW_WHISPER_RUNTIME_LABEL=darwin-universal npm run prepare:whisper-runtime && npm run build && electron-builder --mac --universal",
     "package:mac:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --mac --arm64 --dir",
     "package:linux": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux",
-    "package:linux:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux --dir"
+    "package:linux:dir": "npm run prepare:whisper-runtime && npm run build && electron-builder --linux --dir",
+    "doctor:mac-recording": "bash scripts/diagnose-recording-mac.sh"
   },
   "devDependencies": {
     "@electron/notarize": "^3.1.0",
